@@ -14,55 +14,54 @@ Initialized in a context of barebone Rails API to be able to launch and check th
 
 ### Changelog
 
-**REST**ful resoures:
+jQuery file is a simple datepicker library integration [Datepicker](https://api.jqueryui.com/datepicker/)
+
+The file has a select field with pre-populated dates supplied as a string.
+
+At the very beginning it hides the input field, splits the pre-populated data and adds a class to `<select>` element:
 
 ```
-  root to: 'application#index'
-
-  resources :jobs do
-    resources :contact_requests, only: :create
-  end
+ var values = $dateInput.data("values").split(",");
+ var $select = $("<select>").addClass("select-date");
 ```
 
-Added nested resources for `Job` and `Contact Request` controller.
-This action makes an app follow REST principles and construct request URLs this way:`jobs/1/contact_requests`
-
-Next step is permitted params:
+Then it declares additional elements like Button and Input fields:
 
 ```
-  def permitted_params
-    params.permit(:job_id, :purpose)
-  end
+var $datePickerBtn = $("<button>", {
+    html: '<i class="fa fa-calendar" aria-hidden="true"></i>', class: "open-date-picker"
+});
+
+var $datePicker = $("<input>", {
+    type: "text",
+    readonly: true
+});
 ```
 
-We are permitting `:job_id` and `:purpose` keys to be filtered and allowed by Rails application
-
-Next thing is strict instance variable declaration and avoiding **N+1** queries:
+After that it mounts a `Datepicker` widget to the input element and appends pre-populated values:
 
 ```
-Job.find_by_id(params[:job_id])
+ $datePicker.datepicker({
+    minDate: 0
+});
 ```
 
-This request was fired twice: in a controller and concern. We're getting rid of such occurrence with:
-
 ```
-included do
-    before_action :set_current_user, :set_job, :set_purpose, :requires_premium_membership, only: :create
-  end
+$select.append(values.map(function (c, i) {
+    return $("<option>", { text: c, value: c, "data-index": i });
+}));
 ```
 
-Both `:set_job` and `:set_purpose` were triggered once and are available as instance variables inside a controller.
-It resolves an issue with multiple initiation like:
+The snippet has a mysterious variable `DatePickerIndex` and it equals to `3`. I could not understand its purpose.
+The code compares an index of selected value with previously defined index. In case the index is matching, it sets input value to blank string. 
+If it is not, the code prompts to select data.
+
 ```
-purpose = params[:purpose]
+var existingValue = $dateInput.val();
 ```
 
-`included` sets required instance variables before any action
+After this piece of code the `Datepicker` is shown with existing value or otherwise it populates
+the `dateInput` field with pre-defined `datePickerIndex` again.
 
-Next is resolving useless variable assignments like `@tradesman = current_user` in the controller
-
-Then the invitation mailer was stubbed by fake module which checks argument length and returns true in order to proceed and check failure and success cases.
-
-Regarding the model, mostly all of the methods were taken out of the context but my assumption is that the relations were incorrectly set and I have re-designed the model following the logic of inverse relation.
-
-Looking at `previous_quote` methods, I have added completely abstract solution following my own logic. This should be discussed.
+The jquery file is completely out of context and it was difficult to guess is it a piece of a bigger
+file or a separate function. Requires discussion.
